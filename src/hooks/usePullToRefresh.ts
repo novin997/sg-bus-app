@@ -12,7 +12,9 @@ export function usePullToRefresh(onRefresh: () => Promise<void>) {
     let distance = 0
 
     const onStart = (e: TouchEvent) => {
-      startY = window.scrollY <= 0 ? e.touches[0].clientY : null
+      // Dragging the map pans it; it must never trigger a refresh.
+      const onMap = e.target instanceof Element && e.target.closest('.map-wrap')
+      startY = window.scrollY <= 0 && !onMap ? e.touches[0].clientY : null
       distance = 0
     }
     const onMove = (e: TouchEvent) => {

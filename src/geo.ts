@@ -5,6 +5,8 @@ export interface LngLat {
   lat: number
 }
 
+export const SINGAPORE: LngLat = { lng: 103.8198, lat: 1.3521 }
+
 /** Great-circle distance in metres (haversine). */
 export function distanceMetres(a: LngLat, b: LngLat): number {
   const R = 6_371_000

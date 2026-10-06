@@ -5,16 +5,15 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 // MapLibre 6 looks for its worker next to its own script, which Vite doesn't copy.
 // Let Vite bundle the worker (with its shared chunk) and point MapLibre at it.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react'
 import type { Stop } from '../api/stops'
 import { useFavourites } from '../favourites'
-import { nearestStops, type LngLat } from '../geo'
+import { SINGAPORE, type LngLat } from '../geo'
 import { stopHref } from '../hooks/useRoute'
 import { applyDraculaMap, DRACULA, MAP_STYLE_URL } from '../mapTheme'
 
 maplibregl.setWorkerUrl(workerUrl)
 
-const SINGAPORE: LngLat = { lng: 103.8198, lat: 1.3521 }
 const PITCH_3D = 55
 // Battery limits: cap the tilt, and only extrude buildings when zoomed in close.
 const MAX_PITCH = 60
@@ -31,16 +30,32 @@ function stopsGeoJSON(stops: Map<string, Stop>, favouriteCodes: Set<string>): Fe
   }
 }
 
-/** Map with GPS: shows every stop, lists the nearest ones, tap a stop to open it. */
-export default function MapScreen({ stops }: { stops: Map<string, Stop> | null }) {
+export interface StopMapHandle {
+  flyTo: (stop: Stop) => void
+}
+
+interface Props {
+  stops: Map<string, Stop> | null
+  /** Where "nearby" is measured from: the user's GPS fix, else the map centre. */
+  onOriginChange: (origin: LngLat, fromGps: boolean) => void
+  onGpsError: (message: string | null) => void
+  ref?: Ref<StopMapHandle>
+}
+
+/** Map with GPS: shows every stop; tap one to open it. */
+export default function StopMap({ stops, onOriginChange, onGpsError, ref }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const [mapReady, setMapReady] = useState(false)
-  const [userPos, setUserPos] = useState<LngLat | null>(null)
-  const [mapCenter, setMapCenter] = useState<LngLat>(SINGAPORE)
-  const [gpsError, setGpsError] = useState<string | null>(null)
   const [is3D, setIs3D] = useState(true)
+  const hasGpsFix = useRef(false)
   const favourites = useFavourites()
+
+  // Callbacks change identity on every parent render; keep the latest without re-creating the map.
+  const callbacks = useRef({ onOriginChange, onGpsError })
+  useEffect(() => {
+    callbacks.current = { onOriginChange, onGpsError }
+  })
 
   // Create the map once.
   useEffect(() => {
@@ -65,11 +80,13 @@ export default function MapScreen({ stops }: { stops: Map<string, Stop> | null }
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right')
 
     geolocate.on('geolocate', (e) => {
-      setGpsError(null)
-      setUserPos({ lng: e.coords.longitude, lat: e.coords.latitude })
+      hasGpsFix.current = true
+      callbacks.current.onGpsError(null)
+      callbacks.current.onOriginChange({ lng: e.coords.longitude, lat: e.coords.latitude }, true)
     })
     geolocate.on('error', (e) => {
-      setGpsError(
+      hasGpsFix.current = false
+      callbacks.current.onGpsError(
         e.code === GeolocationPositionError.PERMISSION_DENIED
           ? 'Location is off. Showing stops near the map centre instead.'
           : 'Could not get your location. Showing stops near the map centre instead.',
@@ -80,8 +97,9 @@ export default function MapScreen({ stops }: { stops: Map<string, Stop> | null }
     map.on('pitchend', () => setIs3D(map.getPitch() > 5))
 
     map.on('moveend', () => {
+      if (hasGpsFix.current) return
       const c = map.getCenter()
-      setMapCenter({ lng: c.lng, lat: c.lat })
+      callbacks.current.onOriginChange({ lng: c.lng, lat: c.lat }, false)
     })
 
     map.on('load', () => {
@@ -149,43 +167,22 @@ export default function MapScreen({ stops }: { stops: Map<string, Stop> | null }
     mapRef.current?.getSource<GeoJSONSource>('stops')?.setData(stopsGeoJSON(stops, codes))
   }, [mapReady, stops, favourites])
 
-  const origin = userPos ?? mapCenter
-  const nearby = stops ? nearestStops(stops, origin) : []
-  const flyTo = (s: Stop) =>
-    mapRef.current?.flyTo({ center: [s.lng, s.lat], zoom: 17, pitch: is3D ? PITCH_3D : 0 })
+  useImperativeHandle(ref, () => ({
+    flyTo: (stop) =>
+      mapRef.current?.flyTo({
+        center: [stop.lng, stop.lat],
+        zoom: 17,
+        pitch: (mapRef.current?.getPitch() ?? 0) > 5 ? PITCH_3D : 0,
+      }),
+  }))
   const toggle3D = () => mapRef.current?.easeTo({ pitch: is3D ? 0 : PITCH_3D, duration: 600 })
 
   return (
-    <div className="map-screen">
-      <a className="back" href="#/">
-        ← My buses
-      </a>
-      <div className="map-wrap">
-        <div ref={container} className="map" />
-        <button className="pitch-toggle" onClick={toggle3D} aria-label={is3D ? 'Switch to flat map' : 'Switch to 3D map'}>
-          {is3D ? '2D' : '3D'}
-        </button>
-      </div>
-
-      {gpsError && <p className="status">{gpsError}</p>}
-      <h2 className="nearby-title">{userPos ? 'Stops near you' : 'Stops near map centre'}</h2>
-      {!stops && <p className="status">Loading stops…</p>}
-      {stops && nearby.length === 0 && <p className="status">No stops within 800 m. Move the map or zoom in.</p>}
-      <ul className="nearby">
-        {nearby.map(({ stop, metres }) => (
-          <li key={stop.code}>
-            <a href={stopHref(stop.code)}>
-              <span className="stop-name">{stop.name}</span>
-              <span className="stop-meta">
-                {stop.code} · {stop.road} · {Math.round(metres)} m
-              </span>
-            </a>
-            <button className="show-on-map" onClick={() => flyTo(stop)} aria-label={`Show ${stop.name} on map`}>
-              ◎
-            </button>
-          </li>
-        ))}
-      </ul>
+    <div className="map-wrap">
+      <div ref={container} className="map" />
+      <button className="pitch-toggle" onClick={toggle3D} aria-label={is3D ? 'Switch to flat map' : 'Switch to 3D map'}>
+        {is3D ? '2D' : '3D'}
+      </button>
     </div>
   )
 }
