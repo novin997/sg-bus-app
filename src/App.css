@@ -5,8 +5,11 @@
 }
 
 h1 {
-  font-size: 1.4rem;
+  font-family: var(--mono);
+  font-size: 1.35rem;
+  font-weight: 700;
   margin: 8px 0 4px;
+  text-wrap: balance;
 }
 
 a {
@@ -44,7 +47,8 @@ button {
   margin: 16px 0;
   padding: 4px 12px 8px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 10px;
+  background: var(--surface);
 }
 
 .card-header {
@@ -56,6 +60,7 @@ button {
 
 .stop-name {
   font-weight: 700;
+  color: var(--text);
 }
 
 .stop-meta {
@@ -69,7 +74,7 @@ button {
 .back {
   display: inline-block;
   padding: 4px 0;
-  color: var(--accent);
+  color: var(--cyan);
 }
 
 .stop-heading {
@@ -86,7 +91,8 @@ button {
   padding: 6px 12px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--bg-deep);
+  color: var(--yellow);
 }
 
 .hint {
@@ -128,27 +134,35 @@ button {
 }
 
 .bus-no {
-  font-size: 1.25rem;
+  font-family: var(--mono);
+  font-size: 1.2rem;
   font-weight: 700;
+  color: var(--purple);
 }
 
 .load {
   width: 10px;
   height: 10px;
   border-radius: 50%;
+  box-shadow: 0 0 6px currentColor;
 }
 
-.load-SEA { background: var(--load-seats); }
-.load-SDA { background: var(--load-standing); }
-.load-LSD { background: var(--load-full); }
+.load-SEA { background: var(--load-seats); color: var(--load-seats); }
+.load-SDA { background: var(--load-standing); color: var(--load-standing); }
+.load-LSD { background: var(--load-full); color: var(--load-full); }
 
 .next {
-  font-weight: 600;
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--green);
+  font-variant-numeric: tabular-nums;
 }
 
 .later {
+  font-family: var(--mono);
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .pin {
@@ -161,7 +175,7 @@ button {
 }
 
 .pin.pinned {
-  color: var(--accent);
+  color: var(--yellow);
 }
 
 .details {
@@ -182,10 +196,16 @@ button {
 .destination {
   margin: 0 0 4px;
   font-weight: 600;
+  color: var(--pink);
+}
+
+.details strong {
+  font-family: var(--mono);
+  color: var(--green);
 }
 
 .scheduled {
-  color: var(--muted);
+  color: var(--comment);
   font-style: italic;
 }
 
@@ -220,7 +240,11 @@ button {
   color: inherit;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--surface);
+  background: var(--bg-deep);
+}
+
+.open-stop input::placeholder {
+  color: var(--comment);
 }
 
 .open-stop button {
@@ -228,7 +252,8 @@ button {
   border: 0;
   border-radius: 8px;
   background: var(--accent);
-  color: #fff;
+  color: var(--bg);
+  font-weight: 700;
 }
 
 footer {
@@ -251,8 +276,9 @@ footer {
   padding: 8px 14px;
   border-radius: 999px;
   background: var(--accent);
-  color: #fff;
+  color: var(--bg);
   font-size: 0.9rem;
+  font-weight: 700;
 }
 
 /* Map screen */
@@ -274,18 +300,59 @@ footer {
   padding: 6px 12px;
   border: 0;
   border-radius: 8px;
-  background: #ffffff;
-  color: #111418;
+  background: var(--line);
+  color: var(--text);
+  font-family: var(--mono);
   font-weight: 700;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
 .popup-link {
-  color: #1d4ed8;
+  color: var(--cyan);
   font-weight: 600;
 }
 
+/* MapLibre controls and popups in Dracula colours */
+.maplibregl-popup-content {
+  background: var(--line);
+  color: var(--text);
+  border-radius: 8px;
+}
+
+.maplibregl-popup-anchor-top .maplibregl-popup-tip { border-bottom-color: var(--line); }
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip { border-top-color: var(--line); }
+.maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: var(--line); }
+.maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: var(--line); }
+
+.maplibregl-ctrl-group {
+  background: var(--line);
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top-color: var(--bg);
+}
+
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+
+.maplibregl-ctrl-attrib.maplibregl-compact {
+  background: var(--line);
+  color: var(--text);
+}
+
+.maplibregl-ctrl-attrib a {
+  color: var(--cyan);
+}
+
+.maplibregl-user-location-dot,
+.maplibregl-user-location-dot::before {
+  background-color: var(--cyan);
+}
+
 .nearby-title {
+  font-family: var(--mono);
+  color: var(--pink);
   font-size: 1rem;
   margin: 16px 0 4px;
 }
@@ -315,5 +382,5 @@ footer {
   border: 0;
   background: none;
   font-size: 1.2rem;
-  color: var(--accent);
+  color: var(--cyan);
 }

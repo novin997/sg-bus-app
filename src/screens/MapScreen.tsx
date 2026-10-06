@@ -10,10 +10,10 @@ import type { Stop } from '../api/stops'
 import { useFavourites } from '../favourites'
 import { nearestStops, type LngLat } from '../geo'
 import { stopHref } from '../hooks/useRoute'
+import { applyDraculaMap, DRACULA, MAP_STYLE_URL } from '../mapTheme'
 
 maplibregl.setWorkerUrl(workerUrl)
 
-const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty'
 const SINGAPORE: LngLat = { lng: 103.8198, lat: 1.3521 }
 const PITCH_3D = 55
 // Battery limits: cap the tilt, and only extrude buildings when zoomed in close.
@@ -47,7 +47,7 @@ export default function MapScreen({ stops }: { stops: Map<string, Stop> | null }
     if (!container.current) return
     const map = new maplibregl.Map({
       container: container.current,
-      style: STYLE_URL,
+      style: MAP_STYLE_URL,
       center: [SINGAPORE.lng, SINGAPORE.lat],
       zoom: 11,
       pitch: PITCH_3D,
@@ -85,10 +85,7 @@ export default function MapScreen({ stops }: { stops: Map<string, Stop> | null }
     })
 
     map.on('load', () => {
-      // The OpenFreeMap style already has flat ("building") and extruded ("building-3d") layers;
-      // hand over from flat to 3D at our own zoom threshold.
-      if (map.getLayer('building')) map.setLayerZoomRange('building', 13, BUILDINGS_3D_MIN_ZOOM)
-      if (map.getLayer('building-3d')) map.setLayerZoomRange('building-3d', BUILDINGS_3D_MIN_ZOOM, 24)
+      applyDraculaMap(map, BUILDINGS_3D_MIN_ZOOM)
 
       map.addSource('stops', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addLayer({
@@ -98,8 +95,8 @@ export default function MapScreen({ stops }: { stops: Map<string, Stop> | null }
         minzoom: 13,
         paint: {
           'circle-radius': ['interpolate', ['linear'], ['zoom'], 13, 3, 17, 8],
-          'circle-color': ['case', ['get', 'favourite'], '#f59e0b', '#2563eb'],
-          'circle-stroke-color': '#ffffff',
+          'circle-color': ['case', ['get', 'favourite'], DRACULA.pink, DRACULA.purple],
+          'circle-stroke-color': DRACULA.bg,
           'circle-stroke-width': 1.5,
           'circle-pitch-alignment': 'map', // lie flat on the ground when tilted
         },
@@ -116,7 +113,7 @@ export default function MapScreen({ stops }: { stops: Map<string, Stop> | null }
           'text-offset': [0, 1.2],
           'text-anchor': 'top',
         },
-        paint: { 'text-color': '#1f2937', 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 },
+        paint: { 'text-color': DRACULA.text, 'text-halo-color': DRACULA.bg, 'text-halo-width': 1.5 },
       })
 
       map.on('click', 'stops', (e: MapLayerMouseEvent) => {
